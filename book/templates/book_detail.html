@@ -1,0 +1,47 @@
+{% extends 'home.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ book.title }}</title>
+</head>
+<body>
+<div class="container">
+    <h1>{{ book.title }}</h1>
+    <img src="{{ book.image_url }}" alt="Book image" style="max-width: 100%; height: auto;">
+    <table class="table table-striped">
+        <tbody>
+            <tr>
+                <th scope="row">Title</th>
+                <td>{{ book.title }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Author</th>
+                <td>{{ book.author }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Publication Date</th>
+                <td>{{ book.publication_date }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Description</th>
+                <td>{{ book.description }}</td>
+            </tr>
+<tr>
+                <th scope="row">category </th>
+                <td>{{ book.category }}</td>
+</tr>
+        </tbody>
+    </table>
+    {% if user.is_authenticated %}
+        <a href="{% url 'borrow_book' book.id %}" class="btn btn-primary">Borrow</a>
+    {% if user_has_borrowed %}
+            <a href="{% url 'return_book' book.id %}" class="btn btn-secondary">Return</a>
+        {% endif %}
+    {% endif %}
+</div>
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'home.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borrow Book</title>
+</head>
+<body>
+<div class="container">
+    <h2>Borrow Book: {{ book.title }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ form.non_field_errors }}
+            <label for="{{ form.borrowed_date.id_for_label }}" class="form-label">{{ form.borrowed_date.label }}</label>
+            {{ form.borrowed_date }}
+            {% if form.borrowed_date.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.borrowed_date.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="{{ form.return_date.id_for_label }}" class="form-label">{{ form.return_date.label }}</label>
+            {{ form.return_date }}
+            {% if form.return_date.errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.return_date.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary">Borrow</button>
+    </form>
+</div>
+</body>
+</html>
+{% endblock %}
