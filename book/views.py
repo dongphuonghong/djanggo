@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login as auth_login, authenticate, logout as auth_logout
+from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.utils import timezone
 from django.contrib import messages
+
 from .models import Book, BorrowedBook
 from .forms import BorrowedBookForm, CreationFormUser, emailAuthenticationForm
 
@@ -23,8 +23,16 @@ def book_list(request):
 
 def book_detail(request, book_id):
     book = get_object_or_404(Book, id=book_id)
-    user_has_borrowed_book = book.borrowedbook_set.filter(borrower=request.user, return_date__isnull=True).exists()
-    return render(request, 'book_detail.html', {'book': book, 'user_has_borrowed_book': user_has_borrowed_book})
+    user_has_borrowed_book = False
+    if request.user.is_authenticated:
+        user_has_borrowed_book = book.borrowedbook_set.filter(
+            borrower=request.user,
+            return_date__isnull=True,
+        ).exists()
+    return render(request, 'book_detail.html', {
+        'book': book,
+        'user_has_borrowed_book': user_has_borrowed_book,
+    })
 
 
 @login_required
@@ -33,30 +41,36 @@ def borrow_book(request, book_id):
     if book.quantity <= 0:
         messages.error(request, 'Book is not available now!')
         return redirect('book_detail', book_id=book.id)
+
     if request.method == 'POST':
         form = BorrowedBookForm(request.POST)
         if form.is_valid():
             borrowed_book = form.save(commit=False)
             borrowed_book.book = book
             borrowed_book.borrower = request.user
-            borrowed_book.borrowed_date = timezone.now()
+            borrowed_book.borrowed_date = timezone.now().date()
             borrowed_book.save()
             book.quantity -= 1
             book.save()
             messages.success(request, 'Book borrowed successfully!')
-            return redirect('home')
+            return redirect('book_detail', book_id=book.id)
     else:
-        form = BorrowedBookForm()
+        form = BorrowedBookForm(initial={'borrowed_date': timezone.now().date()})
+
     return render(request, 'borrow_book.html', {'form': form, 'book': book})
 
 
 @login_required
 def return_book(request, book_id):
     book = get_object_or_404(Book, id=book_id)
-    borrowed_book = BorrowedBook.objects.filter(book=book, borrower=request.user, return_date__isnull=True).first()
+    borrowed_book = BorrowedBook.objects.filter(
+        book=book,
+        borrower=request.user,
+        return_date__isnull=True,
+    ).first()
 
     if borrowed_book:
-        borrowed_book.return_date = timezone.now()
+        borrowed_book.return_date = timezone.now().date()
         borrowed_book.save()
         book.quantity += 1
         book.save()
