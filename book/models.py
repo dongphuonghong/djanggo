@@ -15,7 +15,7 @@ class Book(models.Model):
     itbook = models.CharField(max_length=100, unique=True)
     published_date = models.DateField()
     description = models.TextField()
-    quantity = models.IntegerField()
+    quantity = models.IntegerField(default=0)
     image = models.ImageField(upload_to='book_images')
     category = models.CharField(max_length=255)
     status = models.CharField(

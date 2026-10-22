@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -45,15 +46,24 @@ def borrow_book(request, book_id):
     if request.method == 'POST':
         form = BorrowedBookForm(request.POST)
         if form.is_valid():
-            borrowed_book = form.save(commit=False)
-            borrowed_book.book = book
-            borrowed_book.borrower = request.user
-            borrowed_book.borrowed_date = timezone.now().date()
-            borrowed_book.save()
-            book.quantity -= 1
-            book.save()
+            with transaction.atomic():
+                current_book = Book.objects.select_for_update().get(pk=book.id)
+                if current_book.quantity <= 0:
+                    messages.error(request, 'Book is not available now!')
+                    return redirect('book_detail', book_id=current_book.id)
+
+                borrowed_book = form.save(commit=False)
+                borrowed_book.book = current_book
+                borrowed_book.borrower = request.user
+                borrowed_book.borrowed_date = timezone.now().date()
+                borrowed_book.save()
+
+                current_book.quantity -= 1
+                current_book.status = Book.BORROWED if current_book.quantity <= 0 else Book.AVAILABLE
+                current_book.save()
+
             messages.success(request, 'Book borrowed successfully!')
-            return redirect('book_detail', book_id=book.id)
+            return redirect('book_detail', book_id=current_book.id)
     else:
         form = BorrowedBookForm(initial={'borrowed_date': timezone.now().date()})
 
@@ -70,11 +80,22 @@ def return_book(request, book_id):
     ).first()
 
     if borrowed_book:
-        borrowed_book.return_date = timezone.now().date()
-        borrowed_book.save()
-        book.quantity += 1
-        book.save()
-        messages.success(request, 'Book returned successfully!')
+        with transaction.atomic():
+            current_book = Book.objects.select_for_update().get(pk=book.id)
+            borrowed_book = BorrowedBook.objects.select_related('book').filter(
+                book=current_book,
+                borrower=request.user,
+                return_date__isnull=True,
+            ).first()
+            if borrowed_book:
+                borrowed_book.return_date = timezone.now().date()
+                borrowed_book.save()
+                current_book.quantity += 1
+                current_book.status = Book.AVAILABLE if current_book.quantity > 0 else Book.BORROWED
+                current_book.save()
+                messages.success(request, 'Book returned successfully!')
+            else:
+                messages.error(request, 'You have not borrowed this book.')
     else:
         messages.error(request, 'You have not borrowed this book.')
 

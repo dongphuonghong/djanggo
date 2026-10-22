@@ -37,10 +37,13 @@
     </table>
 
     {% if user.is_authenticated %}
-        <a href="{% url 'borrow_book' book.id %}" class="btn btn-primary">Borrow</a>
-
         {% if user_has_borrowed_book %}
-            <a href="{% url 'return_book' book.id %}" class="btn btn-secondary">Return</a>
+            <form method="post" action="{% url 'return_book' book.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary">Return</button>
+            </form>
+        {% else %}
+            <a href="{% url 'borrow_book' book.id %}" class="btn btn-primary">Borrow</a>
         {% endif %}
     {% endif %}
 </div>
